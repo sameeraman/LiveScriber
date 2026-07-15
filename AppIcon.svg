@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+
+    <!-- Background: deep navy gradient -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#0e1e4a"/>
+      <stop offset="100%" stop-color="#060c24"/>
+    </linearGradient>
+
+    <!-- Subtle radial sheen centered above the waveform -->
+    <radialGradient id="sheen" cx="50%" cy="30%" r="50%">
+      <stop offset="0%"   stop-color="#2563eb" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#060c24" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Waveform bar fill: sky-blue gradient (light top → vivid bottom) -->
+    <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="#bae6fd"/>
+      <stop offset="100%" stop-color="#0ea5e9"/>
+    </linearGradient>
+
+    <!-- Glow for the centre (tallest) bar -->
+    <filter id="glowC" x="-50%" y="-20%" width="200%" height="140%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="14" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Softer glow for the flanking bars -->
+    <filter id="glowF" x="-50%" y="-20%" width="200%" height="140%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="9" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+  </defs>
+
+  <!-- ── Background ──────────────────────────────────────────────── -->
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="224" fill="url(#sheen)"/>
+
+  <!-- ── Waveform bars ────────────────────────────────────────────
+       5 bars  |  width 66 px  |  gap 28 px
+       total width = 5×66 + 4×28 = 442 px  →  startX = (1024−442)/2 = 291
+       All bars share the same vertical centre:  y_c = 390
+       Heights (symmetric):  outer 210 · inner 295 · centre 380
+  ─────────────────────────────────────────────────────────────────-->
+
+  <!-- outer left  (x=291,  h=210, top = 390−105 = 285) -->
+  <rect x="291" y="285" width="66" height="210" rx="33"
+        fill="url(#bar)" filter="url(#glowF)" opacity="0.72"/>
+
+  <!-- inner left  (x=385,  h=295, top = 390−147 = 243) -->
+  <rect x="385" y="243" width="66" height="295" rx="33"
+        fill="url(#bar)" filter="url(#glowF)" opacity="0.87"/>
+
+  <!-- centre      (x=479,  h=380, top = 390−190 = 200) -->
+  <rect x="479" y="200" width="66" height="380" rx="33"
+        fill="url(#bar)" filter="url(#glowC)"/>
+
+  <!-- inner right (x=573,  h=295, top = 390−147 = 243) -->
+  <rect x="573" y="243" width="66" height="295" rx="33"
+        fill="url(#bar)" filter="url(#glowF)" opacity="0.87"/>
+
+  <!-- outer right (x=667,  h=210, top = 390−105 = 285) -->
+  <rect x="667" y="285" width="66" height="210" rx="33"
+        fill="url(#bar)" filter="url(#glowF)" opacity="0.72"/>
+
+  <!-- ── Divider ──────────────────────────────────────────────── -->
+  <rect x="180" y="636" width="664" height="2" rx="1" fill="white" opacity="0.10"/>
+
+  <!-- ── Transcription text lines ────────────────────────────────
+       Three pill-shaped "lines of text" with decreasing opacity,
+       suggesting live transcription output.
+  ─────────────────────────────────────────────────────────────────-->
+
+  <!-- line 1: full width -->
+  <rect x="180" y="664" width="664" height="44" rx="22" fill="white" opacity="0.85"/>
+
+  <!-- line 2: ~76% width -->
+  <rect x="180" y="732" width="506" height="44" rx="22" fill="white" opacity="0.56"/>
+
+  <!-- line 3: ~40% width (still being typed) -->
+  <rect x="180" y="800" width="266" height="44" rx="22" fill="white" opacity="0.24"/>
+
+  <!-- blinking-cursor hint at end of line 3 -->
+  <rect x="458" y="800" width="7" height="44" rx="3" fill="#38bdf8" opacity="0.65"/>
+
+</svg>

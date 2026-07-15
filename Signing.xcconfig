@@ -1,0 +1,18 @@
+// Signing.xcconfig — portable, committed signing defaults.
+//
+// By default the app is signed ad-hoc ("Sign to Run Locally") so anyone can
+// clone and build without an Apple Developer account. This is what ships in the
+// GitHub release binaries (see README for the Gatekeeper "open anyway" steps).
+//
+// To sign locally with your own Apple Development certificate (stable signature,
+// so macOS stops re-prompting for permissions on every build), copy
+// Local.xcconfig.example to Local.xcconfig and fill in your team/identity.
+// Local.xcconfig is git-ignored and overrides the values below.
+
+CODE_SIGN_STYLE = Automatic
+CODE_SIGN_IDENTITY = -
+DEVELOPMENT_TEAM =
+PROVISIONING_PROFILE_SPECIFIER =
+
+// Optional local overrides (git-ignored). The "?" means it's fine if missing.
+#include? "Local.xcconfig"

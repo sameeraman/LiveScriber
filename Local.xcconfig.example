@@ -1,0 +1,13 @@
+// Local.xcconfig.example — template for local signing overrides.
+//
+// Copy this file to "Local.xcconfig" and fill in your own values to sign local
+// builds with your Apple Development certificate. Local.xcconfig is git-ignored.
+//
+// Find your identity hash and team with:
+//   security find-identity -v -p codesigning
+// The long hex string is CODE_SIGN_IDENTITY. The team ID is the OU of the cert:
+//   security find-certificate -c "Apple Development" -p | openssl x509 -noout -subject
+
+CODE_SIGN_STYLE = Manual
+DEVELOPMENT_TEAM = YOUR_TEAM_ID
+CODE_SIGN_IDENTITY = YOUR_CERT_SHA1_HASH

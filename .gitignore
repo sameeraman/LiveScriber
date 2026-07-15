@@ -1,0 +1,22 @@
+# macOS / Xcode
+.DS_Store
+build/
+DerivedData/
+*.xcuserstate
+*.xcscmblueprint
+
+# Xcode user-specific state
+xcuserdata/
+**/xcuserdata/
+
+# Local, machine-specific signing overrides (never commit personal certs/team)
+Local.xcconfig
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Packages/
+
+# Release artifacts
+*.dmg
+*.zip
