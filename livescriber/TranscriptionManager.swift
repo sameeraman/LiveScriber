@@ -35,9 +35,20 @@ final class TranscriptionManager: ObservableObject {
     private var loopTask: Task<Void, Never>?
     nonisolated(unsafe) private var combinedMode = false
 
+    // User-adjustable transcription window (seconds of audio per pass). Smaller =
+    // lower latency / less context; larger = higher accuracy / more latency.
+    // Read from the real-time transcription loop, set from the main actor.
+    nonisolated(unsafe) private var chunkSeconds: Double = 1.5
+
     // Thread-safe sample buffer — accessed from real-time audio callback
     nonisolated(unsafe) private var rawSamples: [Float] = []
     private let samplesLock = NSLock()  // NSLock is Sendable; let constant is safe from any context
+
+    /// Sets the transcription window length in seconds (clamped to a sane range).
+    /// Takes effect on the next loop iteration, so it can be changed mid-session.
+    func setChunkSeconds(_ seconds: Double) {
+        chunkSeconds = min(max(seconds, 1.5), 8.0)
+    }
 
     // MARK: - Model loading
 
@@ -193,14 +204,14 @@ final class TranscriptionManager: ObservableObject {
     // MARK: - Transcription loop (nonisolated — runs off the main actor)
 
     nonisolated private func transcriptionLoop(whisperKit: WhisperKit) async {
-        // Low-latency streaming: poll often and transcribe short windows so captions
-        // trail speech by ~1.5 s instead of 5–10 s.
+        // Streaming transcription: poll often and transcribe short windows so captions
+        // trail speech by roughly one window length instead of 5–10 s.
         //
-        // minSamples   — emit as soon as ~1.5 s of audio has accumulated.
-        // chunkSamples — catch-up cap; never transcribe more than ~3 s in one pass.
+        // The window length is user-adjustable via `chunkSeconds`:
+        //   minSamples   — emit as soon as one window of audio has accumulated.
+        //   chunkSamples — catch-up cap; never transcribe more than two windows at once.
         // In combined mode two streams fill the buffer ~2× faster, so double both.
-        let minSamples   = combinedMode ? 48_000 : 24_000  // 1.5 s at 16 kHz
-        let chunkSamples = combinedMode ? 96_000 : 48_000  // 3.0 s at 16 kHz
+        // Read once per iteration so slider changes apply without restarting a session.
 
         // Decode options tuned for speed: skip the slow temperature-fallback
         // re-decode loop and drop timestamp/special tokens we don't use.
@@ -212,6 +223,11 @@ final class TranscriptionManager: ObservableObject {
         while !Task.isCancelled {
             try? await Task.sleep(for: .milliseconds(200))
             guard !Task.isCancelled else { return }
+
+            // Recompute each pass so live slider changes take effect immediately.
+            let windowSamples = Int(chunkSeconds * 16_000)
+            let minSamples    = combinedMode ? windowSamples * 2 : windowSamples
+            let chunkSamples  = minSamples * 2
 
             let chunk: [Float] = samplesLock.withLock {
                 if rawSamples.count >= chunkSamples {

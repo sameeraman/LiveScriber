@@ -206,6 +206,8 @@ struct DetailView: View {
                     VStack(alignment: .leading, spacing: 0) {
                         if model.viewedEntries.isEmpty {
                             emptyState
+                        } else if model.isEditing {
+                            editableTranscript
                         } else {
                             // One selectable Text so highlighting spans across minutes.
                             Text(transcriptAttributed(model.viewedEntries))
@@ -219,7 +221,7 @@ struct DetailView: View {
                     .padding(16)
                 }
                 .onChange(of: model.viewedEntries.count) { _, _ in
-                    if isViewingLive {
+                    if isViewingLive && !model.isEditing {
                         withAnimation(.easeOut(duration: 0.3)) {
                             proxy.scrollTo("bottom", anchor: .bottom)
                         }
@@ -275,6 +277,33 @@ struct DetailView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, minHeight: 200)
+    }
+
+    /// Editable transcript: one auto-growing text field per minute block. Timestamps
+    /// stay fixed; only the wording is editable. Saved when the user leaves edit mode.
+    @ViewBuilder
+    private var editableTranscript: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ForEach($model.viewedEntries) { $entry in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(entry.minuteLabel)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    TextField("", text: $entry.text, axis: .vertical)
+                        .textFieldStyle(.plain)
+                        .font(.body)
+                        .padding(8)
+                        .background(Color(nsColor: .textBackgroundColor),
+                                    in: RoundedRectangle(cornerRadius: 6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.secondary.opacity(0.25))
+                        )
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -335,6 +364,21 @@ struct ControlBarView: View {
             }
             .buttonStyle(.bordered)
             .disabled(!model.isRecording)
+
+            // Edit / Done — toggles editable transcript, saving on exit.
+            // Works during live recording: new speech keeps flowing into the fields.
+            Button {
+                model.toggleEditMode()
+            } label: {
+                Label(
+                    model.isEditing ? "Done" : "Edit",
+                    systemImage: model.isEditing ? "checkmark.circle" : "pencil"
+                )
+                .foregroundStyle(model.isEditing ? Color.green : Color.primary)
+            }
+            .buttonStyle(.bordered)
+            .disabled(model.viewedEntries.isEmpty)
+            .help("Edit the transcript to fix mistakes — live transcription keeps updating while you edit")
 
             // Copy last minute
             Button {

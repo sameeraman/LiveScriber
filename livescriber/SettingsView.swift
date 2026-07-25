@@ -24,7 +24,7 @@ struct SettingsView: View {
         }
         .environmentObject(model)
         .padding()
-        .frame(width: 480, height: 340)
+        .frame(width: 480, height: 400)
         .alert("Accessibility Required", isPresented: $showAccessibilityAlert) {
             Button("Open System Settings") {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
@@ -156,6 +156,40 @@ private struct AudioTab: View {
                     .padding(8)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color.accentColor.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
+            }
+
+            Divider()
+
+            // ── Transcription window ──────────────────────────────────
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Transcription Speed vs. Accuracy").font(.headline)
+
+                Slider(
+                    value: Binding(
+                        get: { model.chunkSeconds },
+                        set: { model.setChunkSeconds($0) }
+                    ),
+                    in: 1.5...8.0,
+                    step: 0.5
+                ) {
+                    Text("Chunk size")
+                } minimumValueLabel: {
+                    Image(systemName: "hare.fill").foregroundStyle(.secondary)
+                } maximumValueLabel: {
+                    Image(systemName: "tortoise.fill").foregroundStyle(.secondary)
+                }
+
+                HStack {
+                    Text("Smaller chunks — faster captions")
+                    Spacer()
+                    Text("Larger chunks — more accurate")
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+
+                Text(String(format: "Current window: %.1f s of audio per pass", model.chunkSeconds))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer()
