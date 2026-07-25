@@ -132,6 +132,44 @@ final class SessionManager: ObservableObject {
         if let data = (" " + text).data(using: .utf8) { handle.write(data) }
     }
 
+    /// Rewrites a session file's transcript body from edited entries, preserving the
+    /// original header (title / device / duration) and any "Session ended" footer.
+    /// Timestamps are kept intact so only the wording changes.
+    func saveEditedTranscript(_ entries: [TranscriptEntry], to url: URL) {
+        let existing = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        let lines = existing.components(separatedBy: "\n")
+
+        // Header = everything before the first "## " time heading.
+        var headerLines: [String] = []
+        for line in lines {
+            if line.hasPrefix("## ") { break }
+            headerLines.append(line)
+        }
+
+        // Footer = the trailing "Session ended" block, if the session was finalized.
+        var footer = ""
+        if let footerRange = existing.range(of: "\n---\n\n*Session ended") {
+            footer = String(existing[footerRange.lowerBound...])
+        }
+
+        var out = headerLines.joined(separator: "\n")
+        while out.hasSuffix("\n") { out.removeLast() }
+        out += "\n\n"
+
+        for entry in entries {
+            let text = entry.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { continue }
+            let time = Self.headingTimeFormatter.string(from: entry.timestamp)
+            out += "## \(time)\n\(text)\n\n"
+        }
+
+        while out.hasSuffix("\n") { out.removeLast() }
+        out += footer.isEmpty ? "\n" : footer
+
+        try? out.write(to: url, atomically: true, encoding: .utf8)
+        reloadSessions()
+    }
+
     /// Writes a footer with session end time and duration.
     func finalizeSession(at url: URL, startTime: Date?, endTime: Date) {
         guard let handle = try? FileHandle(forWritingTo: url) else { return }

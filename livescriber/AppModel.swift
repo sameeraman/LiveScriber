@@ -35,6 +35,9 @@ final class AppModel: ObservableObject {
     @Published var alwaysOnTop = false
     @Published var errorMessage: String?
 
+    /// When true the transcript area is editable so the user can correct mistakes.
+    @Published var isEditing = false
+
     // Rename dialog state
     @Published var sessionToRename: CaptionSession?
     @Published var renameText: String = ""
@@ -51,6 +54,10 @@ final class AppModel: ObservableObject {
     @AppStorage("defaultDuration") var defaultDurationRaw = SessionDuration.unlimited.rawValue
     @AppStorage("alwaysOnTopPref") var alwaysOnTopPref = false
     @AppStorage("shortcutEnabled") var shortcutEnabled = false
+
+    /// Transcription window length in seconds. Lower = faster captions with less
+    /// context; higher = more accurate transcription with more latency.
+    @AppStorage("chunkSeconds") var chunkSeconds: Double = 1.5
 
     // MARK: - Internals
 
@@ -90,6 +97,9 @@ final class AppModel: ObservableObject {
         if let d = SessionDuration(rawValue: defaultDurationRaw) {
             targetDuration = d
         }
+
+        // Apply the persisted transcription window to the manager.
+        transcription.setChunkSeconds(chunkSeconds)
 
         // Load devices eagerly so the Audio settings picker isn't empty on first open
         audioDevices.loadDevices()
@@ -161,6 +171,7 @@ final class AppModel: ObservableObject {
         liveEntries  = []
         errorMessage = nil
         selectedSession = nil
+        isEditing    = false
 
         updateEstimatedEndTime()
 
@@ -244,12 +255,46 @@ final class AppModel: ObservableObject {
         NSPasteboard.general.setString(text, forType: .string)
     }
 
+    // MARK: - Edit mode
+
+    /// Toggles transcript editing. Leaving edit mode persists the changes to disk.
+    func toggleEditMode() {
+        if isEditing {
+            exitEditMode(saving: true)
+        } else {
+            isEditing = true
+        }
+    }
+
+    /// Leaves edit mode, optionally writing the edited entries back to the file that
+    /// backs the currently viewed transcript (live session or a previous session).
+    private func exitEditMode(saving: Bool) {
+        if saving {
+            let targetFile = selectedSession?.fileURL ?? currentSessionFile
+            if let file = targetFile {
+                sessionMgr.saveEditedTranscript(viewedEntries, to: file)
+            }
+            // Keep the live buffer in sync when editing the active/last session.
+            if selectedSession == nil {
+                liveEntries = viewedEntries
+            }
+        }
+        isEditing = false
+    }
+
     // MARK: - Duration helpers
 
     func setTargetDuration(_ d: SessionDuration) {
         targetDuration = d
         defaultDurationRaw = d.rawValue
         if isRecording { updateEstimatedEndTime() }
+    }
+
+    // MARK: - Transcription window
+
+    func setChunkSeconds(_ seconds: Double) {
+        chunkSeconds = seconds
+        transcription.setChunkSeconds(seconds)
     }
 
     private func updateEstimatedEndTime() {
@@ -277,11 +322,13 @@ final class AppModel: ObservableObject {
     // MARK: - Sidebar selection
 
     func selectSession(_ session: CaptionSession) {
+        if isEditing { exitEditMode(saving: true) }
         selectedSession  = session
         viewedEntries    = sessionMgr.parseEntries(from: session.fileURL)
     }
 
     func showLiveSession() {
+        if isEditing { exitEditMode(saving: true) }
         selectedSession = nil
         viewedEntries   = liveEntries
     }
@@ -326,8 +373,11 @@ final class AppModel: ObservableObject {
 
         let now = Date()
         let cal = Calendar.current
-        if let _ = liveEntries.last,
-           cal.isDate(liveEntries[liveEntries.count - 1].timestamp, equalTo: now, toGranularity: .minute) {
+        let sameMinute = liveEntries.last.map {
+            cal.isDate($0.timestamp, equalTo: now, toGranularity: .minute)
+        } ?? false
+
+        if sameMinute {
             // Same minute — grow in memory AND append continuation to file
             liveEntries[liveEntries.count - 1].text += " " + trimmed
             if let file = currentSessionFile {
@@ -342,7 +392,17 @@ final class AppModel: ObservableObject {
             }
         }
 
-        if selectedSession == nil {
+        guard selectedSession == nil else { return }
+
+        if isEditing {
+            // Live editing: apply the same incremental change to the editable buffer
+            // so new speech flows into the fields without discarding the user's edits.
+            if sameMinute, !viewedEntries.isEmpty {
+                viewedEntries[viewedEntries.count - 1].text += " " + trimmed
+            } else if let latest = liveEntries.last {
+                viewedEntries.append(latest)
+            }
+        } else {
             viewedEntries = liveEntries
         }
     }
