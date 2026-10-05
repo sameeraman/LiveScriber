@@ -20,6 +20,14 @@ No account. Nothing leaves your Mac.**
   <img src="images/screen_capture_1.png" width="820" alt="LiveScriber transcribing a live session, with the session browser in the sidebar">
 </p>
 
+## Too long to read? Watch this video
+
+<p align="center">
+  <a href="images/livescriber-launch.mp4"><img src="images/livescriber-launch.gif" width="820" alt="LiveScriber launch video"></a>
+</p>
+
+<p align="center">▶️ <a href="images/livescriber-launch.mp4">Watch the full video with sound</a></p>
+
 ---
 
 ## Why it exists
